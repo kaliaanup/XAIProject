@@ -86,6 +86,7 @@ def extract_features(document):
         features['contains(%s)' % word] = (word in document_words)
     return features
 
+#----------------------------CLASSIFICATION----------------------------------*/
 training_set = nltk.classify.apply_features(extract_features, trainingdata)
 
 classifier = nltk.NaiveBayesClassifier.train(training_set)
