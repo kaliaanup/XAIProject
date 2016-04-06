@@ -4,8 +4,9 @@
 import collections
 import pymongo
 import nltk
-from nltk import (precision, recall, f_measure)
-
+import itertools
+from nltk import precision, recall, f_measure
+from utilities import get_unigrams, get_bigrams, remove_stopwords_unigrams, remove_stopwords_bigrams
 #from nltk.corpus import treebank
 
 #------------CONNECT TO MONGODB-------------------------*/
@@ -42,12 +43,12 @@ test_len = neglen - training_len
 trainingdata = []
 for sentence in pos_sentences[0:training_len]:
     #tokenize each sentence
-    tokens = nltk.word_tokenize(sentence)
+    tokens = nltk.word_tokenize(sentence.lower())
     trainingdata.append((tokens, "POSITIVE_TIME"))
     
 for sentence in neg_sentences[0:training_len]:
     #tokenize each sentence
-    tokens = nltk.word_tokenize(sentence)
+    tokens = nltk.word_tokenize(sentence.lower())
     trainingdata.append((tokens, "NEGATIVE_TIME"))
 
 print("TRAINING DATA CONSTRUCTED")
@@ -67,30 +68,32 @@ for sentence in neg_sentences[training_len:neglen]:
 print("TEST DATA CONSTRUCTED")
 
 #---------------EXTRACTION of FEATURES-------------------*/
-def get_words_in_data(data):
-    all_words = []
-    for (words, labels) in data: all_words.extend(words)
-    return all_words
 
-def get_word_features(wordlist):
-    wordlist = nltk.FreqDist(wordlist)
-    word_features = wordlist.keys()
-    return word_features
+unigrams = get_unigrams(trainingdata)
+#unigrams_no_stopwords = remove_stopwords_unigrams(trainingdata)
+#print(unigrams_no_stopwords)
+bigrams = get_bigrams(trainingdata)
 
-word_features = get_word_features(get_words_in_data(trainingdata))
-
-print(word_features)
-
+#print(bigrams)
+#document takes the tokens
 def extract_features(document):
-    document_words = set(document)
+    data_words = set(document)
     features = {}
-    for word in word_features:
-        features['contains(%s)' % word] = (word in document_words)
+    #add unigrams or unigrams_no_stopwords
+    for w in unigrams:
+        #check if the word exist in a sentence and then mark true or false
+        features[w] = (w in data_words) 
+    #add bigrams or bigrams_no_stopwords
+    for ngram in bigrams:
+       features[ngram] = (ngram in itertools.chain(data_words)) 
+    #add bigrams
     return features
 
 #----------------------------CLASSIFICATION----------------------------------*/
 training_set = nltk.classify.apply_features(extract_features, trainingdata)
+print(training_set[0])
 
+'''
 classifier = nltk.NaiveBayesClassifier.train(training_set)
 #print(classifier.show_most_informative_features(40))
 
@@ -98,7 +101,7 @@ testing_set = nltk.classify.apply_features(extract_features, testingdata)
 
 #print("Naive Bayes Algo accuracy percent:", (nltk.classify.accuracy(classifier, testing_set))*100)
 
-#-----------------------------COMPUTING METRICS-------------------------------*/
+#-----------------------------COMPUTING PERFORMANCE of CLASSIFIERS-------------------------------*/
 actuallabels =collections.defaultdict(set)
 predictedlabels = collections.defaultdict(set)
 
@@ -108,8 +111,8 @@ for i, (tokens, label) in enumerate(testing_set):
     predictedlabels[predicted].add(i)
     
 
-print(actuallabels)
-print(predictedlabels)
+#print(actuallabels)
+#print(predictedlabels)
 
 
 print ('pos precision:', precision(actuallabels['POSITIVE_TIME'], predictedlabels['POSITIVE_TIME']))
@@ -119,3 +122,4 @@ print ('pos F-measure:', f_measure(actuallabels['POSITIVE_TIME'], predictedlabel
 print ('neg precision:', precision(actuallabels['NEGATIVE_TIME'], predictedlabels['NEGATIVE_TIME']))
 print ('neg recall:', recall(actuallabels['NEGATIVE_TIME'], predictedlabels['NEGATIVE_TIME']))
 print ('neg F-measure:', f_measure(actuallabels['NEGATIVE_TIME'], predictedlabels['NEGATIVE_TIME']))
+'''
