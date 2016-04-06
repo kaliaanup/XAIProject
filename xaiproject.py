@@ -1,9 +1,11 @@
 '''Created on Apr 4, 2016
 @author: Anup Kalia
 '''
+import collections
 import pymongo
 import nltk
-import numpy
+from nltk import (precision, recall, f_measure)
+
 #from nltk.corpus import treebank
 
 #------------CONNECT TO MONGODB-------------------------*/
@@ -90,9 +92,30 @@ def extract_features(document):
 training_set = nltk.classify.apply_features(extract_features, trainingdata)
 
 classifier = nltk.NaiveBayesClassifier.train(training_set)
-print(classifier.show_most_informative_features(40))
+#print(classifier.show_most_informative_features(40))
 
 testing_set = nltk.classify.apply_features(extract_features, testingdata)
 
-print("Naive Bayes Algo accuracy percent:", (nltk.classify.accuracy(classifier, testing_set))*100)
+#print("Naive Bayes Algo accuracy percent:", (nltk.classify.accuracy(classifier, testing_set))*100)
 
+#-----------------------------COMPUTING METRICS-------------------------------*/
+actuallabels =collections.defaultdict(set)
+predictedlabels = collections.defaultdict(set)
+
+for i, (tokens, label) in enumerate(testing_set):
+    actuallabels[label].add(i)
+    predicted = classifier.classify(tokens)
+    predictedlabels[predicted].add(i)
+    
+
+print(actuallabels)
+print(predictedlabels)
+
+
+print ('pos precision:', precision(actuallabels['POSITIVE_TIME'], predictedlabels['POSITIVE_TIME']))
+print ('pos recall:',  recall(actuallabels['POSITIVE_TIME'], predictedlabels['POSITIVE_TIME']))
+print ('pos F-measure:', f_measure(actuallabels['POSITIVE_TIME'], predictedlabels['POSITIVE_TIME']))
+
+print ('neg precision:', precision(actuallabels['NEGATIVE_TIME'], predictedlabels['NEGATIVE_TIME']))
+print ('neg recall:', recall(actuallabels['NEGATIVE_TIME'], predictedlabels['NEGATIVE_TIME']))
+print ('neg F-measure:', f_measure(actuallabels['NEGATIVE_TIME'], predictedlabels['NEGATIVE_TIME']))
