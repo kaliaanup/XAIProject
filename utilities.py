@@ -11,7 +11,8 @@ from nltk.metrics import BigramAssocMeasures
 from nltk.stem import WordNetLemmatizer
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import string
-
+import collections
+from nltk import precision, recall, f_measure
 
 #-----------store all words as unigrams----------------------*/
 def get_unigrams(data):
@@ -47,7 +48,7 @@ def get_bigrams(data):
             all_words.append(word)
             
     bigram_finder = BigramCollocationFinder.from_words(all_words)
-    bigrams = bigram_finder.nbest(BigramAssocMeasures.chi_sq, 1000)   
+    bigrams = bigram_finder.nbest(BigramAssocMeasures.chi_sq, 2000)   
     wordlist = nltk.FreqDist(bigrams)
     bigrams = wordlist.keys()
     
@@ -95,20 +96,18 @@ def extract_sentiments(tokens):
         if(k=='neu'):
             neu=ss[k]
             
-    if(neu > pos and neu> neg):
-        if(pos == neg):
-            sentiment = 'neu'
-        else:
-            if(pos>neg):
-                sentiment = 'pos'
-            else:
-                sentiment = 'neg'
-                
+    if(pos == neg):
+        sentiment = 'neu'
+    if(pos > neg):
+        sentiment='pos'
+    if(neg > pos):
+        sentiment='neg'
+        
     return sentiment
 
 #-----------------Check for Positive Words-------------------*/
 def contains_positive_word(tokens):
-    pos_word = ["great", "work", "fine", 'good', 'okay']
+    pos_word = ["great", "work", "fine", "good", "okay", "perfect"]
     for word in tokens:
             if word in pos_word:
                 return "True"
@@ -160,3 +159,27 @@ def count_multiple_time_of_days(tokens):
         return "True"
     else:
         return "False"
+
+def get_classifier(training_data, algorithm):
+    if(algorithm == "Naive_Bayes"):
+        classifier = nltk.classify.NaiveBayesClassifier.train(training_data)
+    elif(algorithm == "Maximum_Entropy"):
+        classifier =  nltk.classify.MaxentClassifier.train( training_data, 'GIS', trace=0, max_iter=1000)
+    elif(algorithm == "Decision_Tree"):
+        classifier = nltk.classify.DecisionTreeClassifier.train(training_data, entropy_cutoff=0, support_cutoff=0)
+    return classifier
+
+def get_accuracy_measures(classifier, testing_data, p_label):
+    actuallabels =collections.defaultdict(set)
+    predictedlabels = collections.defaultdict(set)
+
+    for i, (tokens, label) in enumerate(testing_data):
+        actuallabels[label].add(i)
+        predicted = classifier.classify(tokens)
+        predictedlabels[predicted].add(i)
+        
+    result=[]
+    result.append(precision(actuallabels[p_label], predictedlabels[p_label]))
+    result.append(recall(actuallabels[p_label], predictedlabels[p_label]))
+    result.append(f_measure(actuallabels[p_label], predictedlabels[p_label]))
+    return result
